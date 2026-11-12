@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   XCircle,
   KeyRound,
-  Filter,
+  X,
 } from "lucide-react";
 import { AuditLogEntry, OrderLineItem } from "@/types/payguard";
 
@@ -29,12 +29,26 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
   const [quickFilterText, setQuickFilterText] = useState<string>("");
   const [tierFilter, setTierFilter] = useState<string>("ALL");
 
+  const tierCounts = useMemo(() => {
+    const counts = {
+      ALL: logs.length,
+      TIER_1_AUTO: 0,
+      TIER_2_STEP_UP: 0,
+      TIER_3_BLOCKED: 0,
+    };
+    for (const row of logs) {
+      if (row.policy_tier in counts) {
+        counts[row.policy_tier as keyof typeof counts] += 1;
+      }
+    }
+    return counts;
+  }, [logs]);
+
   const filteredLogs = useMemo(() => {
     if (tierFilter === "ALL") return logs;
     return logs.filter((row) => row.policy_tier === tierFilter);
   }, [logs, tierFilter]);
 
-  // Financial & Security Aggregations across displayed rows
   const aggregations = useMemo(() => {
     let completedUsd = 0;
     let preventedUsd = 0;
@@ -60,15 +74,15 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
       {
         field: "timestamp",
         headerName: "Timestamp (UTC)",
-        width: 175,
+        width: 170,
         sortable: true,
         filter: true,
         cellRenderer: (params: ICellRendererParams<AuditLogEntry>) => {
           const val = params.value as string;
           if (!val) return null;
-          const formatted = val.replace("T", " ").replace("Z", " UTC");
+          const formatted = val.replace("T", " ").replace("Z", "");
           return (
-            <span className="font-mono text-xs text-slate-400" title={val}>
+            <span className="font-mono text-xs text-slate-400 tabular-nums" title={val}>
               {formatted}
             </span>
           );
@@ -76,7 +90,7 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
       },
       {
         field: "prompt",
-        headerName: "Raw User / Attacker Prompt",
+        headerName: "User / Agent Input & Draft ID",
         flex: 1.6,
         minWidth: 260,
         filter: "agTextColumnFilter",
@@ -84,28 +98,26 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
           const entry = params.data;
           if (!entry) return null;
           return (
-            <div className="flex items-center gap-2 truncate py-1" title={entry.prompt}>
-              <span className="font-mono text-[10px] text-slate-500 shrink-0">
+            <div className="flex items-center gap-2.5 truncate py-1" title={entry.prompt}>
+              <span className="rounded border border-[#262f40] bg-[#141821] px-1.5 py-0.5 font-mono text-[10.5px] text-slate-400 shrink-0 tabular-nums">
                 {entry.order_draft_id}
               </span>
-              <span className="truncate text-xs text-slate-200 font-medium">
-                {entry.prompt}
-              </span>
+              <span className="truncate text-xs text-slate-200">{entry.prompt}</span>
             </div>
           );
         },
       },
       {
         field: "parsed_skus",
-        headerName: "Validated SKUs & Qty",
-        width: 220,
+        headerName: "Validated SKUs",
+        width: 215,
         sortable: false,
         cellRenderer: (params: ICellRendererParams<AuditLogEntry>) => {
           const items = (params.value as OrderLineItem[]) || [];
           if (!items.length) {
             return (
-              <span className="font-mono text-[11px] text-slate-500 italic">
-                None (Short-Circuited)
+              <span className="font-mono text-[11px] text-slate-500">
+                — (Short-Circuited)
               </span>
             );
           }
@@ -114,10 +126,11 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
               {items.map((item, idx) => (
                 <span
                   key={`${item.sku}-${idx}`}
-                  className="inline-flex items-center gap-1 rounded bg-sky-500/15 border border-sky-500/30 px-1.5 py-0.5 font-mono text-[11px] text-sky-300"
+                  className="inline-flex items-center gap-1 rounded border border-[#262f40] bg-[#141821] px-1.5 py-0.5 font-mono text-[11px] text-slate-200 tabular-nums"
                   title={`${item.name} ($${item.unit_price} × ${item.qty})`}
                 >
-                  {item.sku} <strong className="text-white">×{item.qty}</strong>
+                  <span className="text-sky-400">{item.sku}</span>
+                  <span className="text-slate-400">×{item.qty}</span>
                 </span>
               ))}
             </div>
@@ -126,14 +139,14 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
       },
       {
         field: "total_usd",
-        headerName: "Total USD",
-        width: 120,
+        headerName: "Amount (USD)",
+        width: 125,
         sortable: true,
         filter: "agNumberColumnFilter",
         cellRenderer: (params: ICellRendererParams<AuditLogEntry>) => {
           const val = Number(params.value || 0);
           return (
-            <span className="font-mono text-xs font-bold text-white">
+            <span className="font-mono text-xs font-semibold text-slate-100 tabular-nums">
               ${val.toFixed(2)}
             </span>
           );
@@ -142,27 +155,27 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
       {
         field: "policy_tier",
         headerName: "Policy Tier",
-        width: 155,
+        width: 150,
         sortable: true,
         filter: true,
         cellRenderer: (params: ICellRendererParams<AuditLogEntry>) => {
           const tier = params.value as string;
           if (tier === "TIER_1_AUTO") {
             return (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
+              <span className="inline-flex items-center rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10.5px] font-medium text-emerald-300">
                 TIER_1_AUTO
               </span>
             );
           }
           if (tier === "TIER_2_STEP_UP") {
             return (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/40 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
+              <span className="inline-flex items-center rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10.5px] font-medium text-amber-300">
                 TIER_2_STEP_UP
               </span>
             );
           }
           return (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 border border-rose-500/40 px-2.5 py-0.5 text-[11px] font-semibold text-rose-300">
+            <span className="inline-flex items-center rounded border border-red-500/30 bg-red-500/10 px-2 py-0.5 font-mono text-[10.5px] font-medium text-red-300">
               TIER_3_BLOCKED
             </span>
           );
@@ -170,7 +183,7 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
       },
       {
         field: "threat_flag",
-        headerName: "Threat Flag",
+        headerName: "Threat Classification",
         width: 165,
         sortable: true,
         filter: true,
@@ -178,37 +191,37 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
           const flag = params.value as string;
           if (flag === "CLEAN") {
             return (
-              <span className="inline-flex items-center gap-1 rounded bg-slate-800 border border-slate-700 px-2 py-0.5 font-mono text-[11px] text-emerald-400">
-                <ShieldCheck className="h-3 w-3" /> CLEAN
+              <span className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-400">
+                <ShieldCheck className="h-3.5 w-3.5" /> CLEAN
               </span>
             );
           }
           return (
-            <span className="inline-flex items-center gap-1 rounded bg-rose-950/60 border border-rose-500/50 px-2 py-0.5 font-mono text-[11px] font-semibold text-rose-300">
-              <ShieldAlert className="h-3 w-3 text-rose-400" /> {flag}
+            <span className="inline-flex items-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-red-300">
+              <ShieldAlert className="h-3 w-3 text-red-400" /> {flag}
             </span>
           );
         },
       },
       {
         field: "hmac_status",
-        headerName: "HMAC-SHA256 Status",
-        width: 165,
+        headerName: "HMAC-SHA256 State",
+        width: 160,
         sortable: true,
         filter: true,
         cellRenderer: (params: ICellRendererParams<AuditLogEntry>) => {
           const hmac = params.value as string;
           if (hmac === "SIGNED_VALID") {
             return (
-              <span className="inline-flex items-center gap-1 rounded bg-sky-500/15 border border-sky-500/40 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-300">
+              <span className="inline-flex items-center gap-1 rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-sky-300">
                 <KeyRound className="h-3 w-3" /> SIGNED_VALID
               </span>
             );
           }
           if (hmac === "PENDING") {
             return (
-              <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-500/40 px-2 py-0.5 font-mono text-[11px] text-amber-300">
-                <Clock className="h-3 w-3" /> AWAITING_30S
+              <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10.5px] text-amber-300">
+                <Clock className="h-3 w-3" /> PENDING_30S
               </span>
             );
           }
@@ -216,7 +229,7 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
             return <span className="font-mono text-xs text-slate-500">N/A</span>;
           }
           return (
-            <span className="inline-flex items-center gap-1 rounded bg-rose-500/15 border border-rose-500/40 px-2 py-0.5 font-mono text-[11px] font-semibold text-rose-300">
+            <span className="inline-flex items-center rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-red-300">
               {hmac}
             </span>
           );
@@ -224,8 +237,8 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
       },
       {
         field: "paypal_order_id",
-        headerName: "PayPal Sandbox Order ID",
-        width: 195,
+        headerName: "PayPal Order ID",
+        width: 190,
         sortable: true,
         filter: true,
         cellRenderer: (params: ICellRendererParams<AuditLogEntry>) => {
@@ -238,18 +251,18 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
             <button
               type="button"
               onClick={() => onSelectOrderReceipt(entry)}
-              className="inline-flex items-center gap-1.5 rounded bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 font-mono text-xs font-medium text-indigo-300 hover:bg-indigo-500/25 hover:text-white transition"
-              title="Click to inspect full PayPal Orders v2 Receipt & Cryptographic Audit Record"
+              className="inline-flex items-center gap-1.5 rounded border border-[#262f40] bg-[#141821] px-2 py-0.5 font-mono text-xs text-sky-300 hover:border-sky-500/40 hover:bg-[#1a202c] hover:text-white transition-colors tabular-nums"
+              title="Inspect PayPal Orders v2 Settlement Receipt"
             >
               <span>{orderId}</span>
-              <ExternalLink className="h-3 w-3 opacity-80" />
+              <ExternalLink className="h-3 w-3 text-slate-400" />
             </button>
           );
         },
       },
       {
         field: "status",
-        headerName: "Status",
+        headerName: "Settlement Status",
         width: 155,
         sortable: true,
         filter: true,
@@ -257,21 +270,21 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
           const st = params.value as string;
           if (st === "COMPLETED") {
             return (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
-                <CheckCircle2 className="h-3.5 w-3.5" /> COMPLETED
+              <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10.5px] font-semibold text-emerald-300">
+                <CheckCircle2 className="h-3 w-3" /> COMPLETED
               </span>
             );
           }
           if (st === "PENDING_APPROVAL") {
             return (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[11px] font-bold text-amber-300 animate-pulse">
-                <Clock className="h-3.5 w-3.5" /> AWAITING_HMAC
+              <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10.5px] font-semibold text-amber-300">
+                <Clock className="h-3 w-3" /> AWAITING_HMAC
               </span>
             );
           }
           return (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/20 border border-rose-500/40 px-2.5 py-0.5 text-[11px] font-bold text-rose-300">
-              <XCircle className="h-3.5 w-3.5" /> BLOCKED
+            <span className="inline-flex items-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-2 py-0.5 font-mono text-[10.5px] font-semibold text-red-300">
+              <XCircle className="h-3 w-3" /> BLOCKED
             </span>
           );
         },
@@ -289,73 +302,83 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
 
   const handleExportCsv = () => {
     gridRef.current?.api.exportDataAsCsv({
-      fileName: `payguard-security-audit-ledger-${Date.now()}.csv`,
+      fileName: `payguard-audit-ledger-${Date.now()}.csv`,
     });
   };
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#0b1222] shadow-xl overflow-hidden">
-      {/* Toolbar Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 px-6 py-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
-            <h2 className="text-base font-bold text-white tracking-tight">
-              AG Grid Live Cryptographic Security & PayPal Orders v2 Audit Ledger
-            </h2>
-            <span className="rounded-md bg-sky-500/15 border border-sky-500/30 px-2 py-0.5 font-mono text-[11px] text-sky-300">
-              ag-grid-react v32
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs text-slate-400">
-            Real-time immutable stream of firewall decisions, SKU sanitizations, HMAC-SHA256 nonces,
-            and PayPal Sandbox captures.
-          </p>
+    <div className="rounded-lg border border-[#1f2533] bg-[#0f1219] overflow-hidden">
+      {/* Ledger Header Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-[#1f2533] bg-[#141821] px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 className="text-sm font-semibold text-slate-100 tracking-tight">
+            Cryptographic Security &amp; PayPal Settlement Audit Ledger
+          </h2>
+          <span className="rounded border border-[#262f40] bg-[#0f1219] px-2 py-0.5 font-mono text-[10.5px] text-slate-400">
+            AG Grid Enterprise View
+          </span>
         </div>
 
         {/* Filter & Export Controls */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Tier Pills */}
-          <div className="flex items-center rounded-lg border border-slate-800 bg-slate-900/90 p-1 text-xs">
-            <Filter className="h-3.5 w-3.5 text-slate-400 ml-2 mr-1.5" />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Segmented Tier Filter */}
+          <div
+            className="inline-flex items-center rounded-md border border-[#1f2533] bg-[#090b10] p-0.5 text-xs"
+            role="group"
+            aria-label="Filter ledger by policy tier"
+          >
             {[
-              { id: "ALL", label: "All Tiers" },
-              { id: "TIER_1_AUTO", label: "Tier 1 (<$25)" },
-              { id: "TIER_2_STEP_UP", label: "Tier 2 (HMAC)" },
-              { id: "TIER_3_BLOCKED", label: "Tier 3 (Blocked)" },
+              { id: "ALL", label: "All", count: tierCounts.ALL },
+              { id: "TIER_1_AUTO", label: "Tier 1", count: tierCounts.TIER_1_AUTO },
+              { id: "TIER_2_STEP_UP", label: "Tier 2", count: tierCounts.TIER_2_STEP_UP },
+              { id: "TIER_3_BLOCKED", label: "Tier 3", count: tierCounts.TIER_3_BLOCKED },
             ].map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setTierFilter(tab.id)}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                   tierFilter === tab.id
-                    ? "bg-sky-500 text-slate-950 font-semibold"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-[#1a202c] text-white border border-[#2e374a]"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                {tab.label}
+                <span>{tab.label}</span>
+                <span className="font-mono text-[10px] text-slate-400 tabular-nums">
+                  {tab.count}
+                </span>
               </button>
             ))}
           </div>
 
           {/* Search Input */}
           <div className="relative">
-            <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="h-3.5 w-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
+              aria-label="Search audit ledger"
               value={quickFilterText}
               onChange={(e) => setQuickFilterText(e.target.value)}
-              placeholder="Filter prompts, SKUs, Order ID..."
-              className="w-56 rounded-lg border border-slate-800 bg-slate-900/90 pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+              placeholder="Search prompt, SKU, Order ID..."
+              className="w-56 rounded-md border border-[#1f2533] bg-[#090b10] pl-8 pr-7 py-1 text-xs text-slate-100 placeholder-slate-500 focus:border-[#0066cc] focus:outline-none"
             />
+            {quickFilterText && (
+              <button
+                type="button"
+                aria-label="Clear search filter"
+                onClick={() => setQuickFilterText("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
           {/* Export CSV */}
           <button
             type="button"
             onClick={handleExportCsv}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700 transition"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#262f40] bg-[#0f1219] px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-[#1a202c] hover:text-white transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             Export CSV
@@ -363,43 +386,51 @@ export default function AuditGrid({ logs, onSelectOrderReceipt }: AuditGridProps
         </div>
       </div>
 
-      {/* AG Grid Table Container */}
-      <div className="ag-theme-quartz-dark payguard-grid w-full" style={{ height: 420 }}>
+      {/* AG Grid Table */}
+      <div className="ag-theme-quartz-dark payguard-grid w-full" style={{ height: 400 }}>
         <AgGridReact<AuditLogEntry>
           ref={gridRef}
           rowData={filteredLogs}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           quickFilterText={quickFilterText}
-          animateRows={true}
+          animateRows={false}
           pagination={true}
           paginationPageSize={10}
           paginationPageSizeSelector={[10, 25, 50]}
         />
       </div>
 
-      {/* Financial Aggregation Footer Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-800 bg-[#080e1c] px-6 py-3 text-xs">
-        <div className="flex flex-wrap items-center gap-6">
-          <div>
-            <span className="text-slate-400">Ledger Records Shown: </span>
-            <span className="font-mono font-bold text-white">{aggregations.totalRows}</span>
+      {/* Reconciliation Summary Footer */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#1f2533] bg-[#0c0f15] px-4 py-2.5 text-xs">
+        <div className="flex flex-wrap items-center gap-5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400">Records Displayed:</span>
+            <span className="font-mono font-semibold text-slate-200 tabular-nums">
+              {aggregations.totalRows}
+            </span>
           </div>
-          <div>
-            <span className="text-slate-400">Verified PayPal Captures: </span>
-            <span className="font-mono font-bold text-emerald-400">
+          <span className="text-[#1f2533]" aria-hidden="true">
+            |
+          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400">Settled PayPal Volume:</span>
+            <span className="font-mono font-semibold text-emerald-400 tabular-nums">
               ${aggregations.completedUsd} USD
             </span>
           </div>
-          <div>
-            <span className="text-slate-400">Prevented Unauthorized Spend: </span>
-            <span className="font-mono font-bold text-rose-400">
-              ${aggregations.preventedUsd} USD ({aggregations.blockedCount} blocked events)
+          <span className="text-[#1f2533]" aria-hidden="true">
+            |
+          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400">Blocked / Prevented Exposure:</span>
+            <span className="font-mono font-semibold text-red-400 tabular-nums">
+              ${aggregations.preventedUsd} USD ({aggregations.blockedCount} blocked)
             </span>
           </div>
         </div>
         <div className="font-mono text-[11px] text-slate-500">
-          Zero-Trust Policy Engine • Constant-Time HMAC-SHA256 • PayPal Orders v2
+          SQLite WAL Ledger • PayPal-Request-Id Idempotency Enforced
         </div>
       </div>
     </div>
