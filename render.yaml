@@ -1,0 +1,48 @@
+services:
+  # ---------------------------------------------------------------------------
+  # 1. PayGuard Zero-Trust Policy & Cryptographic Backend (FastAPI)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: payguard-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PAYPAL_API_BASE_URL
+        value: https://api-m.sandbox.paypal.com
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HMAC_SERVER_SECRET
+        generateValue: true
+      - key: SQLITE_DB_PATH
+        value: /tmp/payguard.db
+
+  # ---------------------------------------------------------------------------
+  # 2. PayGuard Next.js 14 Dashboard & AG Grid Security Ledger
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: payguard-web
+    runtime: node
+    rootDir: frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start -- -p $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: payguard-api
+          envVarKey: RENDER_EXTERNAL_URL

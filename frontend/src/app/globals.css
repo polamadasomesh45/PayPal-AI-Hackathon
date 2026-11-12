@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #060b16;
+  color: #f1f5f9;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Custom AG Grid Dark Security Ledger Theme Customization */
+.ag-theme-quartz-dark.payguard-grid {
+  --ag-background-color: #0b1222;
+  --ag-header-background-color: #111a2e;
+  --ag-odd-row-background-color: #0d1629;
+  --ag-row-hover-color: rgba(56, 189, 248, 0.08);
+  --ag-border-color: rgba(148, 163, 184, 0.14);
+  --ag-header-foreground-color: #94a3b8;
+  --ag-foreground-color: #e2e8f0;
+  --ag-font-family: "Inter", system-ui, -apple-system, sans-serif;
+  --ag-font-size: 13px;
+  --ag-row-height: 52px;
+  --ag-header-height: 44px;
+}
+
+.ag-theme-quartz-dark.payguard-grid .ag-header-cell-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+
+.ag-theme-quartz-dark.payguard-grid .ag-cell {
+  display: flex;
+  align-items: center;
+}
