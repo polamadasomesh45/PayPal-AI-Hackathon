@@ -104,10 +104,10 @@ PAYPAL/
 ### Step 1: Add Your API Keys to `.env`
 Edit the root [`.env`](file:///d:/PROJECTS/PAYPAL/.env) file and paste your credentials:
 ```env
-PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id_here
-PAYPAL_CLIENT_SECRET=your_paypal_sandbox_client_secret_here
-GEMINI_API_KEY=your_google_gemini_api_key_here
-GROQ_API_KEY=your_groq_api_key_here
+PAYPAL_CLIENT_ID=BAAji8ka7iAOSmWHUeSyr69zeLSIidMEEUuCBeIYDUohMTn1XTxOij-1dcdLLh69pqatEy6TOju8-p0JiQ
+PAYPAL_CLIENT_SECRET=EPGG6D1OhBXOUOSIbBbsYs1MpyIz0OVNGVapmDtBng_P2cmbESQflxY1DzKJI64KQouRm04-NczW9iBN
+PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+GEMINI_API_KEY= AQ.Ab8RN6K1KoEuvs6NWpcdSfN3PxL9UafvtYD7yhOR1jWhHjtDGw
 HMAC_SERVER_SECRET=payguard_zero_trust_hmac_sha256_secret_key_change_in_prod_9f86d081
 ```
 *(Note: PayGuard also works out-of-the-box before keys are added using its built-in deterministic NLP fallback parser and sandbox simulation mode, and automatically switches to live `PAYPAL_SANDBOX_LIVE` and `GEMINI_API` / `GROQ_API` as soon as keys are populated.)*
